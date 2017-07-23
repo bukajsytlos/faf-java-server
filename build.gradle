@@ -37,7 +37,7 @@ repositories {
 }
 
 configurations {
-  compile.exclude module: "spring-boot-starter-tomcat"
+//  compile.exclude module: "spring-boot-starter-tomcat"
   compile.exclude module: "tomcat-jdbc"
   compile.exclude module: "assertj-core"
 }
@@ -160,14 +160,16 @@ dependencies {
   compile("org.springframework.boot:spring-boot-starter-data-jpa")
   compile("org.springframework.boot:spring-boot-starter-cache")
   compile("org.springframework.boot:spring-boot-starter-integration")
+  compile("org.springframework.boot:spring-boot-starter-websocket")
   compile("org.springframework.boot:spring-boot-starter-security")
-  compile("org.springframework.boot:spring-boot-starter-jetty")
+//  compile("org.springframework.boot:spring-boot-starter-jetty")
   compile("org.springframework.security:spring-security-messaging")
   compile("org.springframework.security:spring-security-jwt:${springSecurityJwtVersion}")
   compile("org.springframework.security.oauth:spring-security-oauth2")
   compile("org.springframework:spring-context-support")
   compile("org.springframework.integration:spring-integration-ip")
   compile("org.springframework.integration:spring-integration-security")
+  compile("org.springframework.integration:spring-integration-websocket")
   compile("org.springframework.integration:spring-integration-event")
   compile("de.codecentric:spring-boot-admin-starter-client:${springBootAdminClientVersion}")
   compile("org.bouncycastle:bcprov-jdk15on:${bouncyCastleVersion}")

@@ -74,6 +74,11 @@ public final class ChannelNames {
   public static final String LEGACY_SESSION_REQUEST = "sessionRequest";
 
   /**
+   * Channel for outbound messages to be processed by the webSocket adapter.
+   */
+  public static final String WEB_SOCKET_OUTBOUND = "webSocketOutbound";
+
+  /**
    * Channel for outbound messages to be processed by the legacy adapter.
    */
   public static final String LEGACY_OUTBOUND = "legacyOutbound";

@@ -145,6 +145,8 @@ public class IntegrationConfig {
         switch (message.getHeaders().get(CLIENT_CONNECTION, ClientConnection.class).getProtocol()) {
           case LEGACY_UTF_16:
             return Collections.singletonList(ChannelNames.LEGACY_OUTBOUND);
+          case WEB_SOCKET:
+            return Collections.singletonList(ChannelNames.WEB_SOCKET_OUTBOUND);
           default:
             throw new UnsupportedOperationException("Only legacy outbound route is currently specified");
         }

@@ -25,4 +25,6 @@ public final class MessageHeaders {
   private MessageHeaders() {
     // Not instantiatable
   }
+  public static final String CLIENT_ADDRESS = "clientAddress";
+  public static final String WS_SESSION_ID = "simpSessionId";
 }
