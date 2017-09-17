@@ -42,9 +42,8 @@ spring:
 
 logging:
   level:
-    org.springframework: info
-    org.springframework.integration: warn
     org.springframework.integration: debug
+    org.springframework: info
     com.faforever.server: info
     com.zaxxer.hikari: warn
     org.hibernate: warn

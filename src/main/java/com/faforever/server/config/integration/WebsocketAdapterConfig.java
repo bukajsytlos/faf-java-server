@@ -1,15 +1,18 @@
-package com.faforever.server.config;
+package com.faforever.server.config.integration;
 
-import static com.faforever.server.integration.MessageHeaders.PROTOCOL;
-
-import java.util.HashMap;
-import java.util.stream.Collectors;
-
-import javax.inject.Inject;
-
+import com.faforever.server.client.ClientConnection;
+import com.faforever.server.client.ClientConnectionService;
+import com.faforever.server.config.ServerProperties;
+import com.faforever.server.integration.ChannelNames;
+import com.faforever.server.integration.MessageHeaders;
+import com.faforever.server.integration.Protocol;
+import com.faforever.server.integration.legacy.transformer.LegacyRequestTransformer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.integration.IntegrationMessageHeaderAccessor;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.context.IntegrationContextUtils;
 import org.springframework.integration.dsl.HeaderEnricherSpec;
@@ -26,32 +29,31 @@ import org.springframework.integration.websocket.inbound.WebSocketInboundChannel
 import org.springframework.integration.websocket.outbound.WebSocketOutboundMessageHandler;
 import org.springframework.messaging.Message;
 
-import com.faforever.server.client.ClientConnection;
-import com.faforever.server.client.ClientConnectionManager;
-import com.faforever.server.integration.ChannelNames;
-import com.faforever.server.integration.MessageHeaders;
-import com.faforever.server.integration.Protocol;
-import com.faforever.server.integration.legacy.transformer.LegacyRequestTransformer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
+import javax.inject.Inject;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Configuration
+@Slf4j
 public class WebsocketAdapterConfig {
 
   private final ServerProperties serverProperties;
   private final ApplicationEventPublisher applicationEventPublisher;
-  private final ClientConnectionManager clientConnectionManager;
+  private final ClientConnectionService clientConnectionService;
 
   @Inject
-  public WebsocketAdapterConfig(ServerProperties serverProperties, ApplicationEventPublisher applicationEventPublisher, ClientConnectionManager clientConnectionManager) {
+  public WebsocketAdapterConfig(ServerProperties serverProperties, ApplicationEventPublisher applicationEventPublisher, ClientConnectionService clientConnectionService) {
     this.serverProperties = serverProperties;
     this.applicationEventPublisher = applicationEventPublisher;
-    this.clientConnectionManager = clientConnectionManager;
+    this.clientConnectionService = clientConnectionService;
   }
 
   @Bean
   public IntegrationWebSocketContainer serverWebSocketContainer() {
-    return new ServerWebSocketContainer("/jozko")
+    return new ServerWebSocketContainer("/ws-endpoint")
       .setAllowedOrigins("*");
 //      .withSockJs();
   }
@@ -97,8 +99,7 @@ public class WebsocketAdapterConfig {
 //      .transform(legacyByteArrayToStringTransformer()) // TODO: 8.5.2017 msgpack transformation
       .transform(Transformers.fromJson(HashMap.class))
       .transform(new LegacyRequestTransformer(objectMapper))
-      .enrichHeaders(ipAddressEnricher())
-      .enrichHeaders(ImmutableMap.of(PROTOCOL, Protocol.WEB_SOCKET))
+      .enrichHeaders(sessionIdEnricher())
       .channel(ChannelNames.CLIENT_INBOUND)
       .get();
   }
@@ -126,7 +127,7 @@ public class WebsocketAdapterConfig {
       @Override
       protected Object splitMessage(Message<?> message) {
         if (message.getHeaders().containsKey(MessageHeaders.BROADCAST)) {
-          return clientConnectionManager.getConnections().stream()
+          return clientConnectionService.getConnections().stream()
 //            .filter(clientConnection -> clientConnection.getProtocol() == Protocol.LEGACY_UTF_16)
             .map(clientConnection -> MessageBuilder.fromMessage(message)
               .setHeader(MessageHeaders.CLIENT_CONNECTION, clientConnection)
@@ -142,16 +143,18 @@ public class WebsocketAdapterConfig {
    * Extracts the connection ID from the {@link ClientConnection} header and sets it as {@link IpHeaders#CONNECTION_ID}.
    */
   private Consumer<HeaderEnricherSpec> sessionIdEnricher() {
-    return headerEnricherSpec -> headerEnricherSpec.headerFunction(MessageHeaders.WS_SESSION_ID,
-      message -> message.getHeaders().get(MessageHeaders.CLIENT_CONNECTION, ClientConnection.class).getId());
-  }
-
-  /**
-   * Extracts the IP specific address from the message header and adds it as a generic
-   * {@link MessageHeaders#CLIENT_ADDRESS}.
-   */
-  private Consumer<HeaderEnricherSpec> ipAddressEnricher() {
-    return headerEnricherSpec -> headerEnricherSpec.headerFunction(MessageHeaders.CLIENT_ADDRESS,
-      message -> message.getHeaders().get(IpHeaders.IP_ADDRESS));
+    return headerEnricherSpec -> headerEnricherSpec.headerFunction(IntegrationMessageHeaderAccessor.CORRELATION_ID,
+      message -> {
+        final String connectionId = (String) message.getHeaders().get(MessageHeaders.WS_SESSION_ID);
+        final Optional<ClientConnection> clientConnection = clientConnectionService.getClientConnection(connectionId);
+        if (!clientConnection.isPresent()) {
+          try {
+            clientConnectionService.createClientConnection(connectionId, Protocol.WEB_SOCKET, InetAddress.getByName((String) message.getHeaders().get(IpHeaders.IP_ADDRESS)));
+          } catch (UnknownHostException e) {
+            e.printStackTrace();
+          }
+        }
+        return connectionId;
+      });
   }
 }
