@@ -1,8 +1,10 @@
 package com.faforever.server.config;
 
-//import org.eclipse.jetty.util.thread.QueuedThreadPool;
-
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.springframework.boot.context.embedded.jetty.JettyEmbeddedServletContainerFactory;
 import org.springframework.context.annotation.Configuration;
+
+import javax.inject.Inject;
 
 @Configuration
 public class JettyConfig {
@@ -13,7 +15,7 @@ public class JettyConfig {
     this.fafServerProperties = fafServerProperties;
   }
 
-/*  @Inject
+  @Inject
   public void configureJettyServletWebServerFactory(JettyEmbeddedServletContainerFactory factory) {
     factory.addServerCustomizers(server -> {
       final QueuedThreadPool threadPool = server.getBean(QueuedThreadPool.class);
@@ -21,5 +23,5 @@ public class JettyConfig {
       threadPool.setMaxThreads(fafServerProperties.getJetty().getMaxThreads());
       threadPool.setIdleTimeout(fafServerProperties.getJetty().getIdleTimeoutMillis());
     });
-  }*/
+  }
 }

@@ -9,6 +9,9 @@ import com.faforever.server.integration.Protocol;
 import com.faforever.server.integration.legacy.transformer.LegacyRequestTransformer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.jetty.websocket.api.WebSocketBehavior;
+import org.eclipse.jetty.websocket.api.WebSocketPolicy;
+import org.eclipse.jetty.websocket.server.WebSocketServerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,8 +31,11 @@ import org.springframework.integration.websocket.ServerWebSocketContainer;
 import org.springframework.integration.websocket.inbound.WebSocketInboundChannelAdapter;
 import org.springframework.integration.websocket.outbound.WebSocketOutboundMessageHandler;
 import org.springframework.messaging.Message;
+import org.springframework.web.socket.server.jetty.JettyRequestUpgradeStrategy;
+import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 
 import javax.inject.Inject;
+import javax.servlet.ServletContext;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
@@ -52,22 +58,24 @@ public class WebsocketAdapterConfig {
   }
 
   @Bean
-  public IntegrationWebSocketContainer serverWebSocketContainer() {
+  public IntegrationWebSocketContainer serverWebSocketContainer(ServletContext servletContext) {
     return new ServerWebSocketContainer("/ws-endpoint")
-      .setAllowedOrigins("*");
-//      .withSockJs();
+      .setAllowedOrigins("*")
+      .setHandshakeHandler(handshakeHandler(servletContext))
+      .withSockJs();
   }
 
-/*  @Bean
-  public DefaultHandshakeHandler handshakeHandler() {
+  @Bean
+  public DefaultHandshakeHandler handshakeHandler(ServletContext servletContext) {
 
     WebSocketPolicy policy = new WebSocketPolicy(WebSocketBehavior.SERVER);
     policy.setInputBufferSize(8192);
     policy.setIdleTimeout(600000);
 
-    return new DefaultHandshakeHandler(
-      new JettyRequestUpgradeStrategy(new WebSocketServerFactory()));
-  }*/
+    final DefaultHandshakeHandler defaultHandshakeHandler = new DefaultHandshakeHandler(
+      new JettyRequestUpgradeStrategy(new WebSocketServerFactory(servletContext, policy)));
+    return defaultHandshakeHandler;
+  }
 
   /**
    * WebSocket inbound adapter that accepts connections and messages from clients.
